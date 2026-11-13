@@ -8,8 +8,8 @@ into a single menu:
   3. Slash commands            - a user-maintained list for addons that expose neither
                                  (Arc Auras, Shadowed Unit Frames, ...)
 
-Click the button for the menu. Clicking a launcher entry sends its left-click;
-hover it for a submenu with explicit Left click / Right click (Bartender4, for
+Click the button for the menu. Hover a launcher entry for its submenu with
+explicit Left click / Right click (Bartender4, for
 example, unlocks bars on left and opens options on right). No bar tooltip: the
 menu is the summary.
 
@@ -162,8 +162,7 @@ end
 -- menu + tooltip
 -- ---------------------------------------------------------------------------
 
--- Each launcher entry runs its left-click when clicked and carries a submenu
--- with explicit "Left click" / "Right click" items, for addons whose launcher
+-- Each launcher entry is a submenu with explicit "Left click" / "Right click" items, for addons whose launcher
 -- does two different things (Bartender4: unlock bars / open options). Blizzard's
 -- menu does not reliably report a right-click on an entry, hence the submenu.
 local function AddSection(root, title, entries, extra, withButtons)
@@ -172,10 +171,14 @@ local function AddSection(root, title, entries, extra, withButtons)
     root:CreateTitle(title, GRAY_FONT_COLOR)
     for _, e in ipairs(entries) do
         local label = extra and extra(e) or e.label
-        local item = root:CreateButton(label, function() e.run("LeftButton") end)
-        if withButtons and item and item.CreateButton then
+        if withButtons then
+            -- a submenu parent: created without a callback, as Titan does;
+            -- a button with a callback is a leaf and its children are ignored
+            local item = root:CreateButton(label)
             item:CreateButton("Left click", function() e.run("LeftButton") end)
             item:CreateButton("Right click", function() e.run("RightButton") end)
+        else
+            root:CreateButton(label, function() e.run("LeftButton") end)
         end
     end
 end

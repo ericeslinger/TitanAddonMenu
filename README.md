@@ -3,8 +3,8 @@
 A [Titan Panel](https://www.curseforge.com/wow/addons/titan-panel) plugin that gathers every addon's
 "open my settings" entry point into **one** bar button.
 
-Click the **Addons** button for a menu with three sections. Clicking a launcher entry sends
-its left-click; **hover the entry for a submenu with explicit Left click / Right click** items
+Click the **Addons** button for a menu with three sections. **Hover a launcher entry for its
+submenu with explicit Left click / Right click** items
 (Bartender4, for example, unlocks its bars on left-click and opens options on right-click).
 The bar button has no tooltip of its own, so it never covers the menu.
 
