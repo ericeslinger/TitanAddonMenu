@@ -8,8 +8,8 @@ into a single menu:
   3. Slash commands            - a user-maintained list for addons that expose neither
                                  (Arc Auras, Shadowed Unit Frames, ...)
 
-Click the button for the menu. Left-click an entry to send a left-click to that
-addon's launcher; right-click the entry to send a right-click (Bartender4, for
+Click the button for the menu. Clicking a launcher entry sends its left-click;
+hover it for a submenu with explicit Left click / Right click (Bartender4, for
 example, unlocks bars on left and opens options on right). No bar tooltip: the
 menu is the summary.
 
@@ -162,33 +162,31 @@ end
 -- menu + tooltip
 -- ---------------------------------------------------------------------------
 
--- Menu callbacks receive (data, menuInputData, menu); menuInputData.buttonName
--- is the mouse button used on the entry, so a right-click on an entry can be
--- forwarded to the launcher as a right-click.
-local function ButtonOf(menuInputData)
-    local b = type(menuInputData) == "table" and menuInputData.buttonName
-    if b == "RightButton" or b == "MiddleButton" then return b end
-    return "LeftButton"
-end
-
-local function AddSection(root, title, entries, extra)
+-- Each launcher entry runs its left-click when clicked and carries a submenu
+-- with explicit "Left click" / "Right click" items, for addons whose launcher
+-- does two different things (Bartender4: unlock bars / open options). Blizzard's
+-- menu does not reliably report a right-click on an entry, hence the submenu.
+local function AddSection(root, title, entries, extra, withButtons)
     if #entries == 0 then return end
     root:CreateDivider()
     root:CreateTitle(title, GRAY_FONT_COLOR)
     for _, e in ipairs(entries) do
         local label = extra and extra(e) or e.label
-        root:CreateButton(label, function(_, menuInputData) e.run(ButtonOf(menuInputData)) end)
+        local item = root:CreateButton(label, function() e.run("LeftButton") end)
+        if withButtons and item and item.CreateButton then
+            item:CreateButton("Left click", function() e.run("LeftButton") end)
+            item:CreateButton("Right click", function() e.run("RightButton") end)
+        end
     end
 end
 
 local function OpenMenu(owner)
     MenuUtil.CreateContextMenu(owner, function(_, root)
         root:CreateTitle(TITLE)
-        root:CreateTitle("left / right-click an entry = left / right-click its button", GRAY_FONT_COLOR)
         local launchers, compartment, slash = Collect()
         local ok, err = pcall(function()
-            AddSection(root, "Launchers", launchers)
-            AddSection(root, "Addon Compartment", compartment)
+            AddSection(root, "Launchers", launchers, nil, true)
+            AddSection(root, "Addon Compartment", compartment, nil, true)
             AddSection(root, "Slash commands", slash, function(e)
                 return e.label .. "  |cff808080" .. e.cmd .. "|r"
             end)
