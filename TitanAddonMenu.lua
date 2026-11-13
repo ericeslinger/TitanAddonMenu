@@ -8,16 +8,16 @@ into a single menu:
   3. Slash commands            - a user-maintained list for addons that expose neither
                                  (Arc Auras, Shadowed Unit Frames, ...)
 
-Click the button for the menu. Hover a launcher entry for its submenu with
-explicit Left click / Right click (Bartender4, for
-example, unlocks bars on left and opens options on right). No bar tooltip: the
-menu is the summary.
+Click the button for the menu. Entries send a left-click to the addon's launcher.
+For addons whose launcher does something different on right-click (Bartender4:
+left unlocks bars, right opens options) add an extra "(right click)" row:
 
-  /addonmenu                 show help
-  /addonmenu list            list the slash entries
-  /addonmenu add /cmd Label  add a slash entry
-  /addonmenu remove /cmd     remove a slash entry
-  /addonmenu reset           restore the default slash entries
+  /addonmenu rightclick add Bartender     (case-insensitive substring match)
+  /addonmenu rightclick remove Bartender
+  /addonmenu rightclick list
+  /addonmenu launchers                     list the launcher names seen
+
+No bar tooltip: the menu is the summary.
 
 Written as an LDB launcher so Titan wraps it with its own plugin frame; this is
 the integration path the Titan developer docs recommend (see Titan/_ATitanDoc.lua
@@ -101,6 +101,7 @@ local function CollectLaunchers()
         if name ~= SELF_NAME and obj.type == "launcher" and type(obj.OnClick) == "function" then
             out[#out + 1] = {
                 label = tostring(obj.label or name),
+                name  = name,
                 key   = Norm(obj.label or name),
                 run   = function(button)
                     local ok, err = pcall(obj.OnClick, TitanFrameFor(name), button or "LeftButton")
@@ -162,23 +163,23 @@ end
 -- menu + tooltip
 -- ---------------------------------------------------------------------------
 
--- Each launcher entry is a submenu with explicit "Left click" / "Right click" items, for addons whose launcher
--- does two different things (Bartender4: unlock bars / open options). Blizzard's
--- menu does not reliably report a right-click on an entry, hence the submenu.
-local function AddSection(root, title, entries, extra, withButtons)
+local function WantsRightClick(e)
+    for _, pat in ipairs(TitanAddonMenuDB.rightclick) do
+        local n = Norm(pat)
+        if n ~= "" and (e.key:find(n, 1, true) or Norm(e.name):find(n, 1, true)) then return true end
+    end
+    return false
+end
+
+local function AddSection(root, title, entries, extra, withRight)
     if #entries == 0 then return end
     root:CreateDivider()
     root:CreateTitle(title, GRAY_FONT_COLOR)
     for _, e in ipairs(entries) do
         local label = extra and extra(e) or e.label
-        if withButtons then
-            -- a submenu parent: created without a callback, as Titan does;
-            -- a button with a callback is a leaf and its children are ignored
-            local item = root:CreateButton(label)
-            item:CreateButton("Left click", function() e.run("LeftButton") end)
-            item:CreateButton("Right click", function() e.run("RightButton") end)
-        else
-            root:CreateButton(label, function() e.run("LeftButton") end)
+        root:CreateButton(label, function() e.run("LeftButton") end)
+        if withRight and WantsRightClick(e) then
+            root:CreateButton(label .. "  |cff808080(right click)|r", function() e.run("RightButton") end)
         end
     end
 end
@@ -189,7 +190,7 @@ local function OpenMenu(owner)
         local launchers, compartment, slash = Collect()
         local ok, err = pcall(function()
             AddSection(root, "Launchers", launchers, nil, true)
-            AddSection(root, "Addon Compartment", compartment, nil, true)
+            AddSection(root, "Addon Compartment", compartment)
             AddSection(root, "Slash commands", slash, function(e)
                 return e.label .. "  |cff808080" .. e.cmd .. "|r"
             end)
@@ -206,6 +207,7 @@ end
 -- ---------------------------------------------------------------------------
 
 local function ResetDefaults()
+    TitanAddonMenuDB.rightclick = { "Bartender" }
     TitanAddonMenuDB.slash = {}
     for _, e in ipairs(DEFAULT_SLASH) do
         TitanAddonMenuDB.slash[#TitanAddonMenuDB.slash + 1] = { cmd = e.cmd, label = e.label }
@@ -214,10 +216,40 @@ end
 
 local function Help()
     Print("usage:")
-    Print("  /addonmenu list")
+    Print("  /addonmenu list                      slash entries")
     Print("  /addonmenu add /command Label text")
     Print("  /addonmenu remove /command")
+    Print("  /addonmenu rightclick add|remove <name>   extra right-click row for a launcher")
+    Print("  /addonmenu rightclick list")
+    Print("  /addonmenu launchers                 launcher names seen")
     Print("  /addonmenu reset")
+end
+
+local function RightClickCmd(action, pat)
+    local rc = TitanAddonMenuDB.rightclick
+    action = (action or ""):lower()
+    if action == "list" or action == "" then
+        if #rc == 0 then Print("no right-click rows") end
+        for _, p in ipairs(rc) do
+            local hits = {}
+            for _, e in ipairs(CollectLaunchers()) do if WantsRightClick({ key = e.key, name = e.name }) and (e.key:find(Norm(p), 1, true) or Norm(e.name):find(Norm(p), 1, true)) then hits[#hits + 1] = e.label end end
+            Print(p .. "  ->  " .. (#hits > 0 and table.concat(hits, ", ") or "|cffff6060no launcher matches|r"))
+        end
+        return
+    end
+    if not pat or pat == "" then return Help() end
+    if action == "add" then
+        for _, p in ipairs(rc) do if p:lower() == pat:lower() then return Print(pat .. " already listed") end end
+        rc[#rc + 1] = pat
+        Print("right-click row added for '" .. pat .. "'")
+    elseif action == "remove" then
+        for i, p in ipairs(rc) do
+            if p:lower() == pat:lower() then table.remove(rc, i) return Print("removed '" .. pat .. "'") end
+        end
+        Print("'" .. pat .. "' not found")
+    else
+        Help()
+    end
 end
 
 SLASH_TITANADDONMENU1 = "/addonmenu"
@@ -225,7 +257,18 @@ SLASH_TITANADDONMENU2 = "/tam"
 SlashCmdList.TITANADDONMENU = function(msg)
     local sub, rest = (msg or ""):match("^%s*(%S*)%s*(.-)%s*$")
     sub = (sub or ""):lower()
-    if sub == "list" then
+    if sub == "rightclick" then
+        local action, pat = rest:match("^(%S*)%s*(.-)$")
+        return RightClickCmd(action, pat)
+    elseif sub == "launchers" then
+        local names = {}
+        for _, e in ipairs(CollectLaunchers()) do names[#names + 1] = e.label .. (e.label ~= e.name and (" [" .. e.name .. "]") or "") end
+        Print(#names > 0 and table.concat(names, ", ") or "(no launchers)")
+    elseif sub == "add" and rest:lower():match("^rightclick%s") then
+        return RightClickCmd("add", (rest:match("^%S+%s+(.-)$")))
+    elseif sub == "remove" and rest:lower():match("^rightclick%s") then
+        return RightClickCmd("remove", (rest:match("^%S+%s+(.-)$")))
+    elseif sub == "list" then
         for _, e in ipairs(TitanAddonMenuDB.slash) do Print(e.cmd .. "  " .. e.label) end
         if #TitanAddonMenuDB.slash == 0 then Print("(no slash entries)") end
     elseif sub == "add" then
@@ -267,6 +310,7 @@ frame:SetScript("OnEvent", function(self, event, name)
 
     TitanAddonMenuDB = TitanAddonMenuDB or {}
     if type(TitanAddonMenuDB.slash) ~= "table" then ResetDefaults() end
+    if type(TitanAddonMenuDB.rightclick) ~= "table" then TitanAddonMenuDB.rightclick = { "Bartender" } end
 
     ldb:NewDataObject(SELF_NAME, {
         type          = "launcher",

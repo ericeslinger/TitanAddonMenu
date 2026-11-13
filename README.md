@@ -3,10 +3,11 @@
 A [Titan Panel](https://www.curseforge.com/wow/addons/titan-panel) plugin that gathers every addon's
 "open my settings" entry point into **one** bar button.
 
-Click the **Addons** button for a menu with three sections. **Hover a launcher entry for its
-submenu with explicit Left click / Right click** items
-(Bartender4, for example, unlocks its bars on left-click and opens options on right-click).
-The bar button has no tooltip of its own, so it never covers the menu.
+Click the **Addons** button for a menu with three sections. Each entry sends a left-click to
+the addon's launcher. For addons whose launcher does something different on right-click
+(Bartender4: left unlocks bars, right opens options) add an extra "(right click)" row with
+`/addonmenu rightclick add Bartender`. The bar button has no tooltip of its own, so it never
+covers the menu.
 
 | Section | Source | Examples |
 |---|---|---|
@@ -20,12 +21,19 @@ Once this is on your bar you can hide the individual launcher buttons from Titan
 ## Slash commands
 
 ```
-/addonmenu                  help
-/addonmenu list             list slash entries
-/addonmenu add /cmd Label   add or relabel an entry
-/addonmenu remove /cmd      remove an entry
-/addonmenu reset            restore the defaults
+/addonmenu                        help
+/addonmenu list                   list slash entries
+/addonmenu add /cmd Label         add or relabel a slash entry
+/addonmenu remove /cmd            remove a slash entry
+/addonmenu rightclick add <name>  add a "(right click)" row for launchers matching <name>
+/addonmenu rightclick remove <name>
+/addonmenu rightclick list        show the patterns and which launchers they match
+/addonmenu launchers              list the launcher names seen
+/addonmenu reset                  restore the defaults
 ```
+
+Launcher matching is a case-insensitive substring match on the launcher's label or LDB name,
+so `bartender` matches `Bartender4`. `Bartender` is in the default right-click list.
 
 `/tam` is an alias for `/addonmenu`.
 
