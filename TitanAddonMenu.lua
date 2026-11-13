@@ -8,7 +8,10 @@ into a single menu:
   3. Slash commands            - a user-maintained list for addons that expose neither
                                  (Arc Auras, Shadowed Unit Frames, ...)
 
-Hover the button for a summary; left- or right-click for the menu.
+Click the button for the menu. Left-click an entry to send a left-click to that
+addon's launcher; right-click the entry to send a right-click (Bartender4, for
+example, unlocks bars on left and opens options on right). No bar tooltip: the
+menu is the summary.
 
   /addonmenu                 show help
   /addonmenu list            list the slash entries
@@ -99,8 +102,8 @@ local function CollectLaunchers()
             out[#out + 1] = {
                 label = tostring(obj.label or name),
                 key   = Norm(obj.label or name),
-                run   = function()
-                    local ok, err = pcall(obj.OnClick, TitanFrameFor(name), "LeftButton")
+                run   = function(button)
+                    local ok, err = pcall(obj.OnClick, TitanFrameFor(name), button or "LeftButton")
                     if not ok then Print(name .. " failed: " .. tostring(err)) end
                 end,
             }
@@ -127,8 +130,8 @@ local function CollectCompartment(seen)
                 if not dup then
                     out[#out + 1] = {
                         label = label,
-                        run   = function()
-                            local ok, err = pcall(_G[fn], name, "LeftButton")
+                        run   = function(button)
+                            local ok, err = pcall(_G[fn], name, button or "LeftButton")
                             if not ok then Print(name .. " failed: " .. tostring(err)) end
                         end,
                     }
@@ -159,19 +162,29 @@ end
 -- menu + tooltip
 -- ---------------------------------------------------------------------------
 
+-- Menu callbacks receive (data, menuInputData, menu); menuInputData.buttonName
+-- is the mouse button used on the entry, so a right-click on an entry can be
+-- forwarded to the launcher as a right-click.
+local function ButtonOf(menuInputData)
+    local b = type(menuInputData) == "table" and menuInputData.buttonName
+    if b == "RightButton" or b == "MiddleButton" then return b end
+    return "LeftButton"
+end
+
 local function AddSection(root, title, entries, extra)
     if #entries == 0 then return end
     root:CreateDivider()
     root:CreateTitle(title, GRAY_FONT_COLOR)
     for _, e in ipairs(entries) do
         local label = extra and extra(e) or e.label
-        root:CreateButton(label, e.run)
+        root:CreateButton(label, function(_, menuInputData) e.run(ButtonOf(menuInputData)) end)
     end
 end
 
 local function OpenMenu(owner)
     MenuUtil.CreateContextMenu(owner, function(_, root)
         root:CreateTitle(TITLE)
+        root:CreateTitle("left / right-click an entry = left / right-click its button", GRAY_FONT_COLOR)
         local launchers, compartment, slash = Collect()
         local ok, err = pcall(function()
             AddSection(root, "Launchers", launchers)
@@ -185,24 +198,6 @@ local function OpenMenu(owner)
             root:CreateTitle("error: " .. tostring(err), RED_FONT_COLOR)
         end
     end)
-end
-
-local function FillTooltip(tooltip)
-    tooltip:AddLine(TITLE)
-    local launchers, compartment, slash = Collect()
-    local function line(title, entries)
-        if #entries == 0 then return end
-        local names = {}
-        for _, e in ipairs(entries) do names[#names + 1] = e.label end
-        tooltip:AddLine(" ")
-        tooltip:AddLine("|cffffd100" .. title .. " (" .. #entries .. ")|r")
-        tooltip:AddLine(table.concat(names, ", "), 0.8, 0.8, 0.8, true)
-    end
-    line("Launchers", launchers)
-    line("Addon Compartment", compartment)
-    line("Slash commands", slash)
-    tooltip:AddLine(" ")
-    tooltip:AddLine("|cff00ff00Click: open the addon menu|r")
 end
 
 -- ---------------------------------------------------------------------------
@@ -277,7 +272,6 @@ frame:SetScript("OnEvent", function(self, event, name)
         icon          = "Interface\\Icons\\INV_Misc_Gear_01",
         label         = TITLE,
         text          = TITLE,
-        OnTooltipShow = FillTooltip,
         OnClick       = function(owner, button)
             if button == "LeftButton" or button == "RightButton" then OpenMenu(owner) end
         end,

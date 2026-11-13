@@ -2,7 +2,7 @@
 ## Title: Titan Panel [|cffeda55fAddons|r]
 ## Notes: One Titan button that gathers every addon's config entry point: LDB launchers, Addon Compartment entries, and slash commands.
 ## Author: Eric Eslinger
-## Version: 0.1.0
+## Version: 0.2.0
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
 ## Dependencies: Titan
 ## SavedVariables: TitanAddonMenuDB
