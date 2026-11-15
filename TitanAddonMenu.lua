@@ -314,7 +314,7 @@ frame:SetScript("OnEvent", function(self, event, name)
 
     ldb:NewDataObject(SELF_NAME, {
         type          = "launcher",
-        icon          = "Interface\\Icons\\INV_Misc_Gear_01",
+        icon          = "Interface\\AddOns\\TitanAddonMenu\\Media\\Icon.png",
         label         = TITLE,
         text          = TITLE,
         OnClick       = function(owner, button)

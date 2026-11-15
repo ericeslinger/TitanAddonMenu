@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b3140"/>
+      <stop offset="1" stop-color="#161a24"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4c27a"/>
+      <stop offset="1" stop-color="#d9893a"/>
+    </linearGradient>
+  </defs>
+  <!-- tile -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="#0b0d12" stroke-width="6"/>
+  <!-- gear: 10 teeth, drawn as a thick ring with rectangular teeth -->
+  <g transform="translate(256 256)">
+    <g fill="url(#gold)">
+      <g id="tooth"><rect x="-26" y="-192" width="52" height="60" rx="10"/></g>
+      <use href="#tooth" transform="rotate(36)"/>
+      <use href="#tooth" transform="rotate(72)"/>
+      <use href="#tooth" transform="rotate(108)"/>
+      <use href="#tooth" transform="rotate(144)"/>
+      <use href="#tooth" transform="rotate(180)"/>
+      <use href="#tooth" transform="rotate(216)"/>
+      <use href="#tooth" transform="rotate(252)"/>
+      <use href="#tooth" transform="rotate(288)"/>
+      <use href="#tooth" transform="rotate(324)"/>
+      <circle r="150"/>
+    </g>
+    <!-- inner face -->
+    <circle r="112" fill="#1b1f2a"/>
+    <circle r="112" fill="none" stroke="#0b0d12" stroke-width="4"/>
+    <!-- menu lines -->
+    <g stroke="#f6f1e7" stroke-width="22" stroke-linecap="round">
+      <line x1="-58" y1="-44" x2="58" y2="-44"/>
+      <line x1="-58" y1="0"   x2="58" y2="0"/>
+      <line x1="-58" y1="44"  x2="20" y2="44"/>
+    </g>
+    <!-- a gold "selected" dot on the short line, hinting at a chosen entry -->
+    <circle cx="50" cy="44" r="12" fill="url(#gold)"/>
+  </g>
+</svg>

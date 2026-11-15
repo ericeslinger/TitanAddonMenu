@@ -1,0 +1,6 @@
+package-as: TitanAddonMenu
+enable-nolib-creation: no
+ignore:
+  - .github
+  - Media/Icon.svg
+  - README.md
