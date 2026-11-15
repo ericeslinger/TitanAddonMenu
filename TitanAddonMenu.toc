@@ -1,4 +1,4 @@
-## Interface: 16001, 120105, 120107
+## Interface: 16001
 ## Title: Titan Panel [|cffeda55fAddons|r]
 ## Notes: One Titan button that gathers every addon's config entry point: LDB launchers, Addon Compartment entries, and slash commands.
 ## Author: Eric Eslinger

@@ -44,9 +44,7 @@ directly; if it is not registered the text is sent through the chat edit box ins
 
 Copy the `TitanAddonMenu` folder into `Interface/AddOns/`. Requires Titan Panel.
 
-Tested on WoW: Forever (interface 16001) with Titan Panel 9.3.x. The TOC also lists the
-current retail interface numbers; the code uses nothing version-specific beyond `MenuUtil`
-and `C_AddOns`, both present on the modern client.
+Supports WoW: Forever (interface 16001) with Titan Panel 9.3.x. Not tested on retail.
 
 ## How it works
 
