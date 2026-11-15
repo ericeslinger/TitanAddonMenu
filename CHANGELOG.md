@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+- Minimap buttons made with LibDBIcon are hidden by default, since the menu replaces them.
+  `/addonmenu minimap show` turns that off; `/addonmenu minimap keep <name>` keeps one.
+  Other addons' settings are not changed.
+
 ## 0.3.1
 - First CurseForge release.
 - Project icon.

@@ -18,6 +18,14 @@ covers the menu.
 Once this is on your bar you can hide the individual launcher buttons from Titan
 (Titan > Configuration > Plugins) and keep the bar clean.
 
+## Minimap buttons
+
+Since the menu replaces them, minimap buttons made with LibDBIcon (which is nearly all of
+them) are **hidden by default**. Nothing is written to the other addons' settings, so
+`/addonmenu minimap show` puts every button back exactly as its own addon has it.
+`/addonmenu minimap keep <name>` leaves one addon's button visible. Buttons an addon draws
+without LibDBIcon are not affected.
+
 ## Slash commands
 
 ```
@@ -29,6 +37,8 @@ Once this is on your bar you can hide the individual launcher buttons from Titan
 /addonmenu rightclick remove <name>
 /addonmenu rightclick list        show the patterns and which launchers they match
 /addonmenu launchers              list the launcher names seen
+/addonmenu minimap hide|show      hide LibDBIcon minimap buttons (default) or stop hiding
+/addonmenu minimap keep <name>    keep one addon's minimap button (unkeep to undo)
 /addonmenu reset                  restore the defaults
 ```
 

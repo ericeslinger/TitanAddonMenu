@@ -19,6 +19,15 @@ left unlocks bars, right opens options) add an extra "(right click)" row:
 
 No bar tooltip: the menu is the summary.
 
+Since this menu replaces them, minimap buttons made with LibDBIcon are hidden
+by default. Nothing is changed in the other addons' settings, so turning this
+off puts every button back as its own addon has it.
+
+  /addonmenu minimap hide | show          hide (default) or stop hiding
+  /addonmenu minimap keep <name>          leave one addon's button visible
+  /addonmenu minimap unkeep <name>
+  /addonmenu minimap                      status
+
 Written as an LDB launcher so Titan wraps it with its own plugin frame; this is
 the integration path the Titan developer docs recommend (see Titan/_ATitanDoc.lua
 and the TitanUI example plugin).
@@ -203,6 +212,93 @@ local function OpenMenu(owner)
 end
 
 -- ---------------------------------------------------------------------------
+-- minimap buttons (LibDBIcon)
+-- ---------------------------------------------------------------------------
+-- Buttons are hidden through an OnShow hook on each button, because LibDBIcon
+-- shows them itself at login and on every Refresh. The owning addon's saved
+-- "hide" setting is never touched.
+
+local mmHooked = {}
+local mmCallback = false
+
+local function DBIcon()
+    return LibStub("LibDBIcon-1.0", true)
+end
+
+local function MinimapKept(name)
+    local key = Norm(name)
+    if key == Norm(SELF_NAME) then return false end
+    for _, pat in ipairs(TitanAddonMenuDB.minimapKeep) do
+        local n = Norm(pat)
+        if n ~= "" and key:find(n, 1, true) then return true end
+    end
+    return false
+end
+
+local function MinimapShouldHide(name)
+    return TitanAddonMenuDB.hideMinimap and not MinimapKept(name)
+end
+
+local function MinimapHook(button, name)
+    if not button or mmHooked[button] then return end
+    mmHooked[button] = true
+    button:HookScript("OnShow", function(self)
+        if MinimapShouldHide(name) then self:Hide() end
+    end)
+end
+
+-- Hook every button and bring each one to the state it should have now.
+local function MinimapApply()
+    local icon = DBIcon()
+    if not icon then return 0, 0 end
+    if not mmCallback and icon.RegisterCallback then
+        mmCallback = true
+        icon.RegisterCallback(frame, "LibDBIcon_IconCreated", function(_, button, name)
+            MinimapHook(button, name)
+            if MinimapShouldHide(name) then button:Hide() end
+        end)
+    end
+    local hidden, total = 0, 0
+    for _, name in ipairs(icon:GetButtonList()) do
+        local button = icon:GetMinimapButton(name)
+        if button then
+            total = total + 1
+            MinimapHook(button, name)
+            if MinimapShouldHide(name) then
+                button:Hide()
+                hidden = hidden + 1
+            elseif not (button.db and button.db.hide) then
+                icon:Show(name) -- as its own addon has it
+            end
+        end
+    end
+    return hidden, total
+end
+
+local function MinimapCmd(action, pat)
+    local db = TitanAddonMenuDB
+    action = (action or ""):lower()
+    if action == "hide" or action == "on" then
+        db.hideMinimap = true
+    elseif action == "show" or action == "off" then
+        db.hideMinimap = false
+    elseif action == "keep" or action == "unkeep" then
+        if not pat or pat == "" then return Print("usage: /addonmenu minimap " .. action .. " <name>") end
+        for i, p in ipairs(db.minimapKeep) do
+            if p:lower() == pat:lower() then table.remove(db.minimapKeep, i) break end
+        end
+        if action == "keep" then db.minimapKeep[#db.minimapKeep + 1] = pat end
+    elseif action ~= "" and action ~= "status" then
+        return Print("usage: /addonmenu minimap hide | show | keep <name> | unkeep <name>")
+    end
+    if not DBIcon() then return Print("no LibDBIcon minimap buttons found") end
+    local hidden, total = MinimapApply()
+    Print(("minimap buttons: hiding is %s, %d of %d hidden%s"):format(
+        db.hideMinimap and "on" or "off", hidden, total,
+        #db.minimapKeep > 0 and (", keeping " .. table.concat(db.minimapKeep, ", ")) or ""))
+end
+
+-- ---------------------------------------------------------------------------
 -- slash command for managing the slash list
 -- ---------------------------------------------------------------------------
 
@@ -222,6 +318,7 @@ local function Help()
     Print("  /addonmenu rightclick add|remove <name>   extra right-click row for a launcher")
     Print("  /addonmenu rightclick list")
     Print("  /addonmenu launchers                 launcher names seen")
+    Print("  /addonmenu minimap hide|show|keep <name>|unkeep <name>   LibDBIcon minimap buttons")
     Print("  /addonmenu reset")
 end
 
@@ -257,7 +354,10 @@ SLASH_TITANADDONMENU2 = "/tam"
 SlashCmdList.TITANADDONMENU = function(msg)
     local sub, rest = (msg or ""):match("^%s*(%S*)%s*(.-)%s*$")
     sub = (sub or ""):lower()
-    if sub == "rightclick" then
+    if sub == "minimap" then
+        local action, pat = rest:match("^(%S*)%s*(.-)$")
+        return MinimapCmd(action, pat)
+    elseif sub == "rightclick" then
         local action, pat = rest:match("^(%S*)%s*(.-)$")
         return RightClickCmd(action, pat)
     elseif sub == "launchers" then
@@ -311,6 +411,8 @@ frame:SetScript("OnEvent", function(self, event, name)
     TitanAddonMenuDB = TitanAddonMenuDB or {}
     if type(TitanAddonMenuDB.slash) ~= "table" then ResetDefaults() end
     if type(TitanAddonMenuDB.rightclick) ~= "table" then TitanAddonMenuDB.rightclick = { "Bartender" } end
+    if TitanAddonMenuDB.hideMinimap == nil then TitanAddonMenuDB.hideMinimap = true end
+    if type(TitanAddonMenuDB.minimapKeep) ~= "table" then TitanAddonMenuDB.minimapKeep = {} end
 
     ldb:NewDataObject(SELF_NAME, {
         type          = "launcher",
@@ -324,4 +426,14 @@ frame:SetScript("OnEvent", function(self, event, name)
         category      = "Interface",
         notes         = "Gathers every addon's config entry point into one menu.",
     })
+end)
+
+-- Minimap buttons: one pass at login, another for addons that load on demand.
+local mmEvents = CreateFrame("Frame")
+mmEvents:RegisterEvent("PLAYER_LOGIN")
+mmEvents:RegisterEvent("ADDON_LOADED")
+mmEvents:SetScript("OnEvent", function(_, event)
+    if type(TitanAddonMenuDB) ~= "table" or TitanAddonMenuDB.hideMinimap == nil then return end
+    if event == "ADDON_LOADED" and not IsLoggedIn() then return end
+    MinimapApply()
 end)
